@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - SkyFleet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .glass { background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .btn-primary { background: #1e40af; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+        .btn-danger { background: #dc2626; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; }
+        .btn-danger:hover { background: #b91c1c; }
+        .sidebar { transition: width 0.3s ease; }
+        .nav-item { transition: all 0.2s; }
+        .nav-item.active { background-color: #312e81; color: white; }
+        .nav-item:hover:not(.active) { background-color: #475569; color: white; }
+        .table-header { background-color: #f8fafc; }
+        .modal-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .modal-input:focus { outline: none; border-color: #3b82f6; }
+        .swal2-container { z-index: 9999 !important; }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-maintenance { background: #fee2e2; color: #991b1b; }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+        }
+        .dropdown-menu.active {
+            display: block;
+            animation: fadeIn 0.2s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            min-height: 120px;
+            padding: 8px;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        .calendar-day:hover { border-color: #3b82f6; }
+        .calendar-day.other-month {
+            background-color: #f8fafc;
+            color: #94a3b8;
+        }
+        .calendar-day-header {
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-align: right;
+        }
+        .flight-event {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-top: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .flight-event:hover {
+            background-color: #dbeafe;
+        }
+        .crew-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+        }
+        .crew-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <div class="flex h-screen">
+        <aside class="sidebar fixed inset-y-0 left-0 w-64 bg-slate-900 text-white z-50 flex flex-col">
+            <div class="flex h-16 items-center justify-center border-b border-slate-700 flex-shrink-0 px-4">
+                <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                <span class="ml-3 text-xl font-bold">SkyFleet</span>
+            </div>
+            
+            <nav class="mt-5 px-2 space-y-1 flex-grow overflow-y-auto">
+                <a href="#" onclick="switchView('overview')" class="nav-item active group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                    <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    Dashboard
+                </a>
+                <a href="#" onclick="switchView('flights')" class="nav-item text-slate-300 group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                    <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    Flight Management
+                </a>
+                <a href="#" onclick="switchView('scheduling')" class="nav-item text-slate-300 group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                    <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    Crew Scheduling
+                </a>
+                <a href="#" onclick="switchView('crew')" class="nav-item text-slate-300 group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                    <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    Crew Roster
+                </a>
+                <a href="#" onclick="switchView('fleet')" class="nav-item text-slate-300 group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                    <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
+                    Fleet Control
+                </a>
+                <a href="#" onclick="switchView('bookings')" class="nav-item text-slate-300 group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                    <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    Bookings
+                </a>
+                <a href="#" onclick="switchView('invites')" class="nav-item text-slate-300 group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                    <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                    Invite Management
+                </a>
+                <a href="#" onclick="switchView('analytics')" class="nav-item text-slate-300 group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                    <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    Analytics
+                </a>
+            </nav>
+            <div class="px-2 pb-4">
+                 <a href="#" onclick="logout()" class="text-slate-300 hover:bg-red-700 hover:text-white group flex items-center px-2 py-2.5 text-sm font-medium rounded-md">
+                     <svg class="mr-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                     Logout
+                 </a>
+            </div>
+        </aside>
+        
+        <div class="flex-1 pl-64">
+            <header class="bg-white shadow-sm sticky top-0 z-40">
+                <div class="px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center h-16">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800" id="page-title">Dashboard</h1>
+                        <p class="text-sm text-slate-500" id="page-subtitle">Welcome back, Administrator</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="relative">
+                            <button onclick="toggleDropdown()" class="flex items-center space-x-3 focus:outline-none hover:bg-gray-100 rounded-lg p-2 transition-colors">
+                                <img class="h-9 w-9 rounded-full ring-2 ring-offset-2 ring-blue-500" src="https://ui-avatars.com/api/?name=Admin&background=3b82f6&color=fff" alt="Admin">
+                                <div class="text-left hidden md:block">
+                                    <p class="text-sm font-semibold text-slate-700" id="user-email-display"></p>
+                                    <p class="text-xs text-slate-500">Administrator</p>
+                                </div>
+                                <svg class="h-5 w-5 text-slate-400 hidden md:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            
+                            <div id="user-dropdown" class="dropdown-menu w-56">
+                                <div class="px-4 py-3 border-b">
+                                    <p class="text-sm font-medium text-gray-900">Signed in as</p>
+                                    <p class="text-sm text-gray-500 truncate" id="user-email-dropdown"></p>
+                                </div>
+                                <div class="py-1">
+                                    <a href="#" onclick="logout()" class="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                        Sign Out
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <main class="p-6 space-y-6">
+                <section id="overview-section">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                        <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-lg shadow-lg text-white">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium opacity-90">Total Flights</h3>
+                                    <p class="text-3xl font-bold mt-2" id="total-flights">0</p>
+                                </div>
+                                <svg class="w-12 h-12 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-lg shadow-lg text-white">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium opacity-90">Aircraft in Fleet</h3>
+                                    <p class="text-3xl font-bold mt-2" id="total-fleet">0</p>
+                                </div>
+                                <svg class="w-12 h-12 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-lg shadow-lg text-white">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium opacity-90">Active Crew</h3>
+                                    <p class="text-3xl font-bold mt-2" id="total-crew">0</p>
+                                </div>
+                                <svg class="w-12 h-12 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-lg shadow-lg text-white">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-sm font-medium opacity-90">Pending Invites</h3>
+                                    <p class="text-3xl font-bold mt-2" id="total-invites">0</p>
+                                </div>
+                                <svg class="w-12 h-12 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Recent Flights</h3>
+                            <div id="recent-flights-list" class="space-y-3"></div>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Fleet Status</h3>
+                            <div id="fleet-status-list" class="space-y-3"></div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section id="flights-section" class="hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-slate-800">Flight Management</h2>
+                            <button onclick="showAddEditFlightModal()" class="btn-primary">
+                                <svg class="w-5 h-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                Add New Flight
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-slate-500">
+                                <thead class="text-xs text-slate-700 uppercase table-header">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">Flight No.</th>
+                                        <th scope="col" class="px-6 py-3">Route</th>
+                                        <th scope="col" class="px-6 py-3">Schedule</th>
+                                        <th scope="col" class="px-6 py-3">Aircraft</th>
+                                        <th scope="col" class="px-6 py-3">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="flights-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="scheduling-section" class="hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-slate-800">Crew Scheduling Calendar</h2>
+                            <div class="flex items-center gap-4">
+                                <button id="prev-month" class="p-2 rounded-full hover:bg-slate-100 font-bold">&lt;</button>
+                                <h3 id="calendar-month-year" class="text-lg font-semibold"></h3>
+                                <button id="next-month" class="p-2 rounded-full hover:bg-slate-100 font-bold">&gt;</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-7 gap-2 text-center font-semibold text-sm text-slate-600 mb-2">
+                            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                        </div>
+                        <div id="calendar-grid"></div>
+                    </div>
+                </section>
+
+                <section id="crew-section" class="hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-slate-800">Crew Roster</h2>
+                            <button onclick="showAddEditCrewModal()" class="btn-primary">
+                                <svg class="w-5 h-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                Add Crew Member
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-slate-500">
+                                <thead class="text-xs text-slate-700 uppercase table-header">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">Name</th>
+                                        <th scope="col" class="px-6 py-3">Email</th>
+                                        <th scope="col" class="px-6 py-3">Role</th>
+                                        <th scope="col" class="px-6 py-3">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="crew-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="fleet-section" class="hidden">
+                       <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-bold text-slate-800">Fleet Control</h2>
+                                <button onclick="showAddEditFleetModal()" class="btn-primary">
+                                    <svg class="w-5 h-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    Add Aircraft
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left text-slate-500">
+                                    <thead class="text-xs text-slate-700 uppercase table-header">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3">Tail No.</th>
+                                            <th scope="col" class="px-6 py-3">Model</th>
+                                            <th scope="col" class="px-6 py-3">Capacity</th>
+                                            <th scope="col" class="px-6 py-3">Status</th>
+                                            <th scope="col" class="px-6 py-3 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fleet-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                </section>
+
+                <section id="bookings-section" class="hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-slate-800">Bookings Management</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-slate-500">
+                                <thead class="text-xs text-slate-700 uppercase table-header">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">Booking ID</th>
+                                        <th scope="col" class="px-6 py-3">Passenger</th>
+                                        <th scope="col" class="px-6 py-3">Flight</th>
+                                        <th scope="col" class="px-6 py-3">Date</th>
+                                        <th scope="col" class="px-6 py-3">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bookings-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="invites-section" class="hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <div class="flex justify-between items-center mb-4">
+                             <h2 class="text-xl font-bold text-slate-800">Invite Management</h2>
+                             <button onclick="sendNewInvite()" class="btn-primary">
+                                 <svg class="w-5 h-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                 Send New Invite
+                             </button>
+                        </div>
+                         <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-slate-500">
+                                <thead class="text-xs text-slate-700 uppercase table-header">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">Email</th>
+                                        <th scope="col" class="px-6 py-3">Sent At</th>
+                                        <th scope="col" class="px-6 py-3">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invites-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="analytics-section" class="hidden">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h2 class="text-xl font-bold text-slate-800 mb-4">Analytics Dashboard</h2>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="border rounded-lg p-4">
+                                <h3 class="font-semibold text-slate-700 mb-3">Flight Statistics</h3>
+                                <div id="flight-analytics" class="space-y-2"></div>
+                            </div>
+                            <div class="border rounded-lg p-4">
+                                <h3 class="font-semibold text-slate-700 mb-3">Fleet Utilization</h3>
+                                <div id="fleet-analytics" class="space-y-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+    
+    <script src="curd-api.js"></script>
+    <script src="admin-dashboard.js"></script>
+</body>
+</html>
